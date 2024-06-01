@@ -334,6 +334,11 @@ class LfmPath
                 ->encodeByMediaType();
         }
 
+        if(this->helper->config('disk') == 's3'){
+            $this->storage->put($encoded_image);
+            return;
+        }
+
 
         $this->storage->put($encoded_image, 'public');
     }
