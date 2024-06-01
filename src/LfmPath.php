@@ -3,8 +3,8 @@
 namespace UniSharp\LaravelFilemanager;
 
 use Illuminate\Container\Container;
-use Intervention\Image\Facades\Image as InterventionImageV2;
-use Intervention\Image\Laravel\Facades\Image as InterventionImageV3;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager as InterventionImageV3;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use UniSharp\LaravelFilemanager\Events\FileIsUploading;
 use UniSharp\LaravelFilemanager\Events\FileWasUploaded;
@@ -323,16 +323,10 @@ class LfmPath
         $thumbWidth = $this->helper->shouldCreateCategoryThumb() && $this->helper->categoryThumbWidth() ? $this->helper->categoryThumbWidth() : config('lfm.thumb_img_width', 200);
         $thumbHeight = $this->helper->shouldCreateCategoryThumb() && $this->helper->categoryThumbHeight() ? $this->helper->categoryThumbHeight() : config('lfm.thumb_img_height', 200);
 
-        if (class_exists(InterventionImageV2::class)) {
-            $encoded_image = InterventionImageV2::make($original_image->get())
-                ->fit($thumbWidth, $thumbHeight)
-                ->stream()
-                ->detach();
-        } else {
-            $encoded_image = InterventionImageV3::read($original_image->get())
-                ->cover($thumbWidth, $thumbHeight)
-                ->encodeByMediaType();
-        }
+        $encoded_image = (new InterventionImageV3(Driver::class))
+            ->read($original_image->get())
+            ->cover($thumbWidth, $thumbHeight)
+            ->encodeByMediaType();
 
         if(this->helper->config('disk') == 's3'){
             $this->storage->put($encoded_image);
