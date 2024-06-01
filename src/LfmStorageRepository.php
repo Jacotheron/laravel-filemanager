@@ -38,6 +38,11 @@ class LfmStorageRepository
         $nameint = strripos($this->path, "/");
         $nameclean = substr($this->path, $nameint + 1);
         $pathclean = substr_replace($this->path, "", $nameint);
+        if($this->helper->config('disk') == 's3'){
+            $this->disk->putFileAs($pathclean, $file, $nameclean);
+            return;
+        }
+
         $this->disk->putFileAs($pathclean, $file, $nameclean, 'public');
     }
 

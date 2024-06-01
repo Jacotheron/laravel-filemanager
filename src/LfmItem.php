@@ -2,6 +2,7 @@
 
 namespace UniSharp\LaravelFilemanager;
 
+use Exception;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -110,7 +111,12 @@ class LfmItem
 
     public function time()
     {
-        return $this->lfm->lastModified();
+        try {
+            return $this->lfm->lastModified();
+        }catch (Exception $e) {
+            return 0;
+        }
+
     }
 
     public function thumbUrl()
