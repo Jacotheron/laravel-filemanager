@@ -328,7 +328,7 @@ class LfmPath
             ->cover($thumbWidth, $thumbHeight)
             ->encodeByMediaType();
 
-        if(this->helper->config('disk') == 's3'){
+        if($this->helper->config('disk') == 's3'){
             $this->storage->put($encoded_image);
             return;
         }
