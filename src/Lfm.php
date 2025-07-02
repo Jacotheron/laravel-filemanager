@@ -14,10 +14,10 @@ class Lfm
     const PACKAGE_NAME = 'laravel-filemanager';
     const DS = '/';
 
-    protected $config;
-    protected $request;
+    protected Config|null $config;
+    protected Request|null $request;
 
-    public function __construct(Config $config = null, Request $request = null)
+    public function __construct(Config|null $config = null, Request|null $request = null)
     {
         $this->config = $config;
         $this->request = $request;
