@@ -111,7 +111,9 @@ class LfmPath
 
     public function folders(): array
     {
-        $all_folders = array_map(function ($directory_path) {
+        $all_folders = array_map(/**
+         * @throws BindingResolutionException
+         */ function ($directory_path) {
             return $this->pretty($directory_path, true);
         }, $this->storage->directories());
 

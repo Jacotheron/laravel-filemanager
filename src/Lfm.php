@@ -32,7 +32,7 @@ class Lfm
 
     public function input($key): string
     {
-        return $this->translateFromUtf8($this->request->input($key));
+        return $this->translateFromUtf8($this->request->input($key) ?? '');
     }
 
     public function config($key)
