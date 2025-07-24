@@ -15,7 +15,7 @@ class ItemsController extends LfmController
      *
      * @return mixed
      */
-    public function getItems()
+    public function getItems(): mixed
     {
         $currentPage = self::getCurrentPageFromRequest();
 
@@ -23,7 +23,7 @@ class ItemsController extends LfmController
         $items = array_merge($this->lfm->folders(), $this->lfm->files());
 
         return [
-            'items' => array_map(function ($item) {
+            'items' => array_map(static function ($item) {
                 return $item->fill()->attributes;
             }, array_slice($items, ($currentPage - 1) * $perPage, $perPage)),
             'paginator' => [
@@ -51,14 +51,14 @@ class ItemsController extends LfmController
                         'name' => trans('laravel-filemanager::lfm.title-' . $type),
                         'url' => $path->path('working_dir'),
                         'children' => $path->folders(),
-                        'has_next' => ! ($type == end($folder_types)),
+                        'has_next' => ! ($type === end($folder_types)),
                     ];
                 }, $folder_types),
             ])
             ->with('items', $items);
     }
 
-    public function doMove()
+    public function doMove(): string
     {
         $target = $this->helper->input('goToFolder');
         $items = $this->helper->input('items');
@@ -96,11 +96,9 @@ class ItemsController extends LfmController
         return parent::$success_response;
     }
 
-    private static function getCurrentPageFromRequest()
+    private static function getCurrentPageFromRequest(): int
     {
         $currentPage = (int) request()->get('page', 1);
-        $currentPage = $currentPage < 1 ? 1 : $currentPage;
-
-        return $currentPage;
+        return max($currentPage, 1);
     }
 }

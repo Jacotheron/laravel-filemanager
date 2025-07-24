@@ -35,25 +35,34 @@ class LfmUploadValidator
     //     return $this;
     // }
 
-    public function sizeLowerThanIniMaximum()
+    /**
+     * @throws FileSizeExceedIniMaximumException
+     */
+    public function sizeLowerThanIniMaximum(): static
     {
-        if ($this->file->getError() == UPLOAD_ERR_INI_SIZE) {
+        if ($this->file->getError() === UPLOAD_ERR_INI_SIZE) {
             throw new FileSizeExceedIniMaximumException();
         }
 
         return $this;
     }
 
-    public function uploadWasSuccessful()
+    /**
+     * @throws FileFailedToUploadException
+     */
+    public function uploadWasSuccessful(): static
     {
-        if ($this->file->getError() != UPLOAD_ERR_OK) {
+        if ($this->file->getError() !== UPLOAD_ERR_OK) {
             throw new FileFailedToUploadException($this->file->getError());
         }
 
         return $this;
     }
 
-    public function nameIsNotDuplicate($new_file_name, LfmPath $lfm_path)
+    /**
+     * @throws DuplicateFileNameException
+     */
+    public function nameIsNotDuplicate($new_file_name, LfmPath $lfm_path): static
     {
         if ($lfm_path->setName($new_file_name)->exists()) {
             throw new DuplicateFileNameException();
@@ -62,18 +71,24 @@ class LfmUploadValidator
         return $this;
     }
 
-    public function mimetypeIsNotExcutable($excutable_mimetypes)
+    /**
+     * @throws ExcutableFileException
+     */
+    public function mimetypeIsNotExcutable($excutable_mimetypes): static
     {
         $mimetype = $this->file->getMimeType();
 
-        if (in_array($mimetype, $excutable_mimetypes)) {
+        if (in_array($mimetype, $excutable_mimetypes, true)) {
             throw new ExcutableFileException();
         }
 
         return $this;
     }
 
-    public function extensionIsNotExcutable()
+    /**
+     * @throws ExcutableFileException
+     */
+    public function extensionIsNotExcutable(): static
     {
         $extension = strtolower($this->file->getClientOriginalExtension());
 
@@ -83,7 +98,7 @@ class LfmUploadValidator
             throw new ExcutableFileException();
         }
 
-        if (strpos($extension, 'php') === 0) {
+        if (str_starts_with($extension, 'php')) {
             throw new ExcutableFileException();
         }
 
@@ -94,18 +109,24 @@ class LfmUploadValidator
         return $this;
     }
 
-    public function mimeTypeIsValid($available_mime_types)
+    /**
+     * @throws InvalidMimeTypeException
+     */
+    public function mimeTypeIsValid($available_mime_types): static
     {
         $mimetype = $this->file->getMimeType();
 
-        if (false === in_array($mimetype, $available_mime_types)) {
+        if (false === in_array($mimetype, $available_mime_types, true)) {
             throw new InvalidMimeTypeException($mimetype);
         }
 
         return $this;
     }
 
-    public function extensionIsValid($disallowed_extensions)
+    /**
+     * @throws InvalidExtensionException
+     */
+    public function extensionIsValid($disallowed_extensions): static
     {
         $extension = strtolower($this->file->getClientOriginalExtension());
 
@@ -113,14 +134,17 @@ class LfmUploadValidator
             throw new InvalidExtensionException();
         }
 
-        if (in_array($extension, $disallowed_extensions)) {
+        if (in_array($extension, $disallowed_extensions, true)) {
             throw new InvalidExtensionException();
         }
 
         return $this;
     }
 
-    public function sizeIsLowerThanConfiguredMaximum($max_size_in_kb)
+    /**
+     * @throws FileSizeExceedConfigurationMaximumException
+     */
+    public function sizeIsLowerThanConfiguredMaximum($max_size_in_kb): static
     {
         // size to kb unit is needed
         $file_size_in_kb = $this->file->getSize() / 1000;

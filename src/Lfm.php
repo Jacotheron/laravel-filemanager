@@ -2,10 +2,12 @@
 
 namespace UniSharp\LaravelFilemanager;
 
+use Exception;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use RuntimeException;
 use UniSharp\LaravelFilemanager\Middlewares\CreateDefaultFolder;
 use UniSharp\LaravelFilemanager\Middlewares\MultiUser;
 
@@ -23,12 +25,12 @@ class Lfm
         $this->request = $request;
     }
 
-    public function getStorage($storage_path)
+    public function getStorage($storage_path): LfmStorageRepository
     {
         return new LfmStorageRepository($storage_path, $this);
     }
 
-    public function input($key)
+    public function input($key): string
     {
         return $this->translateFromUtf8($this->request->input($key));
     }
@@ -44,17 +46,17 @@ class Lfm
      * @param  string  $path  Real path of a file.
      * @return string
      */
-    public function getNameFromPath($path)
+    public function getNameFromPath($path): string
     {
         return $this->utf8Pathinfo($path, 'basename');
     }
 
-    public function utf8Pathinfo($path, $part_name)
+    public function utf8Pathinfo($path, $part_name): string
     {
         // XXX: all locale work-around for issue: utf8 file name got emptified
         // if there's no '/', we're probably dealing with just a filename
         // so just put an 'a' in front of it
-        if (strpos($path, '/') === false) {
+        if (!str_contains($path, '/')) {
             $path_parts = pathinfo('a' . $path);
         } else {
             $path = str_replace('/', '/a', $path);
@@ -64,13 +66,13 @@ class Lfm
         return substr($path_parts[$part_name], 1);
     }
 
-    public function allowFolderType($type)
+    public function allowFolderType($type): bool
     {
-        if ($type == 'user') {
+        if ($type === 'user') {
             return $this->allowMultiUser();
-        } else {
-            return $this->allowShareFolder();
         }
+
+        return $this->allowShareFolder();
     }
 
     public function getCategoryName()
@@ -85,14 +87,14 @@ class Lfm
      *
      * @return string
      */
-    public function currentLfmType()
+    public function currentLfmType(): string
     {
         $lfm_type = 'file';
 
         $request_type = lcfirst(Str::singular($this->input('type') ?: ''));
         $available_types = array_keys($this->config->get('lfm.folder_categories') ?: []);
 
-        if (in_array($request_type, $available_types)) {
+        if (in_array($request_type, $available_types, true)) {
             $lfm_type = $request_type;
         }
 
@@ -114,22 +116,22 @@ class Lfm
         return $view_type;
     }
 
-    public function getUserSlug()
+    public function getUserSlug(): string
     {
         $config = $this->config->get('lfm.private_folder_name');
 
         if (is_callable($config)) {
-            return call_user_func($config);
+            return $config();
         }
 
         if (class_exists($config)) {
             return app()->make($config)->userField();
         }
 
-        return empty(auth()->user()) ? '' : auth()->user()->$config;
+        return auth()->user()->$config ?? '';
     }
 
-    public function getRootFolder($type = null)
+    public function getRootFolder($type = null): string
     {
         if (is_null($type)) {
             $type = 'share';
@@ -193,7 +195,7 @@ class Lfm
      *
      * @return bool
      */
-    public function allowMultiUser()
+    public function allowMultiUser(): bool
     {
         $type_key = $this->currentLfmType();
 
@@ -210,7 +212,7 @@ class Lfm
      *
      * @return bool
      */
-    public function allowShareFolder()
+    public function allowShareFolder(): bool
     {
         if (! $this->allowMultiUser()) {
             return true;
@@ -228,10 +230,10 @@ class Lfm
     /**
      * Translate file name to make it compatible on Windows.
      *
-     * @param  string  $input  Any string.
+     * @param string $input  Any string.
      * @return string
      */
-    public function translateFromUtf8($input)
+    public function translateFromUtf8(string $input): string
     {
         if ($this->isRunningOnWindows()) {
             $input = iconv('UTF-8', mb_detect_encoding($input), $input);
@@ -245,7 +247,7 @@ class Lfm
      *
      * @return string
      */
-    public function ds()
+    public function ds(): string
     {
         $ds = Lfm::DS;
         if ($this->isRunningOnWindows()) {
@@ -260,21 +262,22 @@ class Lfm
      *
      * @return bool
      */
-    public function isRunningOnWindows()
+    public function isRunningOnWindows(): bool
     {
-        return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        return stripos(PHP_OS, 'WIN') === 0;
     }
 
     /**
      * Shorter function of getting localized error message..
      *
-     * @param  mixed  $error_type  Key of message in lang file.
-     * @param  mixed  $variables   Variables the message needs.
+     * @param mixed $error_type Key of message in lang file.
+     * @param mixed $variables Variables the message needs.
      * @return string
+     * @throws Exception
      */
-    public function error($error_type, $variables = [])
+    public function error(mixed $error_type, mixed $variables = []): string
     {
-        throw new \Exception(trans(self::PACKAGE_NAME . '::lfm.error-' . $error_type, $variables));
+        throw new RuntimeException(trans(self::PACKAGE_NAME . '::lfm.error-' . $error_type, $variables));
     }
 
     /**
@@ -282,13 +285,13 @@ class Lfm
      *
      * @return void
      */
-    public static function routes()
+    public static function routes(): void
     {
         $middleware = [ CreateDefaultFolder::class, MultiUser::class ];
         $as = 'unisharp.lfm.';
         $namespace = '\\UniSharp\\LaravelFilemanager\\Controllers\\';
 
-        Route::group(compact('middleware', 'as', 'namespace'), function () {
+        Route::group(compact('middleware', 'as', 'namespace'), static function () {
             // display main layout
             Route::get('/', [
                 'uses' => 'LfmController@show',

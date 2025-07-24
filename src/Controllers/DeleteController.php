@@ -2,6 +2,7 @@
 
 namespace UniSharp\LaravelFilemanager\Controllers;
 
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\Facades\Storage;
 use UniSharp\LaravelFilemanager\Events\FileIsDeleting;
 use UniSharp\LaravelFilemanager\Events\FileWasDeleted;
@@ -16,8 +17,9 @@ class DeleteController extends LfmController
      * Delete image and associated thumbnail.
      *
      * @return mixed
+     * @throws BindingResolutionException
      */
-    public function getDelete()
+    public function getDelete(): mixed
     {
         $item_names = request('items');
         $errors = [];
@@ -40,18 +42,18 @@ class DeleteController extends LfmController
             $file_path = $file_to_delete->path('absolute');
 
             if (is_null($name_to_delete)) {
-                array_push($errors, parent::error('folder-name'));
+                $errors[] = $this->error('folder-name');
                 continue;
             }
 
             if (! $this->lfm->setName($name_to_delete)->exists()) {
-                array_push($errors, parent::error('folder-not-found', ['folder' => $file_path]));
+                $errors[] = $this->error('folder-not-found', ['folder' => $file_path]);
                 continue;
             }
 
             if ($this->lfm->setName($name_to_delete)->isDirectory()) {
                 if (! $this->lfm->setName($name_to_delete)->directoryIsEmpty()) {
-                    array_push($errors, parent::error('delete-folder'));
+                    $errors[] = $this->error('delete-folder');
                     continue;
                 }
 

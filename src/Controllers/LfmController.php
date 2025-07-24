@@ -7,7 +7,7 @@ use UniSharp\LaravelFilemanager\LfmPath;
 
 class LfmController extends Controller
 {
-    protected static $success_response = 'OK';
+    protected static string $success_response = 'OK';
 
     public function __construct()
     {
@@ -23,7 +23,9 @@ class LfmController extends Controller
     {
         if ($var_name === 'lfm') {
             return app(LfmPath::class);
-        } elseif ($var_name === 'helper') {
+        }
+
+        if ($var_name === 'helper') {
             return app(Lfm::class);
         }
     }
@@ -33,7 +35,7 @@ class LfmController extends Controller
      *
      * @return mixed
      */
-    public function show()
+    public function show(): mixed
     {
         return view('laravel-filemanager::index')
             ->withHelper($this->helper);
@@ -44,20 +46,20 @@ class LfmController extends Controller
      *
      * @return array
      */
-    public function getErrors()
+    public function getErrors(): array
     {
         $arr_errors = [];
 
         if (! extension_loaded('gd') && ! extension_loaded('imagick')) {
-            array_push($arr_errors, trans('laravel-filemanager::lfm.message-extension_not_found'));
+            $arr_errors[] = trans('laravel-filemanager::lfm.message-extension_not_found');
         }
 
         if (! extension_loaded('exif')) {
-            array_push($arr_errors, 'EXIF extension not found.');
+            $arr_errors[] = 'EXIF extension not found.';
         }
 
         if (! extension_loaded('fileinfo')) {
-            array_push($arr_errors, 'Fileinfo extension not found.');
+            $arr_errors[] = 'Fileinfo extension not found.';
         }
 
         $mine_config_key = 'lfm.folder_categories.'
@@ -65,7 +67,7 @@ class LfmController extends Controller
             . '.valid_mime';
 
         if (! is_array(config($mine_config_key))) {
-            array_push($arr_errors, 'Config : ' . $mine_config_key . ' is not a valid array.');
+            $arr_errors[] = 'Config : ' . $mine_config_key . ' is not a valid array.';
         }
 
         return $arr_errors;
@@ -76,7 +78,7 @@ class LfmController extends Controller
      *
      * @return null
      */
-    private function applyIniOverrides()
+    private function applyIniOverrides(): void
     {
         $overrides = config('lfm.php_ini_overrides', []);
 
@@ -85,7 +87,7 @@ class LfmController extends Controller
         }
 
         foreach ($overrides as $key => $value) {
-            if ($value && $value != 'false') {
+            if ($value && $value !== 'false') {
                 ini_set($key, $value);
             }
         }

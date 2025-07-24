@@ -3,10 +3,11 @@
 namespace UniSharp\LaravelFilemanager\Controllers;
 
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DownloadController extends LfmController
 {
-    public function getDownload()
+    public function getDownload(): StreamedResponse
     {
         $file = $this->lfm->setName(request('file'));
 

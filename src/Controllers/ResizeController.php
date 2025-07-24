@@ -2,8 +2,9 @@
 
 namespace UniSharp\LaravelFilemanager\Controllers;
 
-use Intervention\Image\Facades\Image as InterventionImageV2;
-use Intervention\Image\Laravel\Facades\Image as InterventionImageV3;
+use Illuminate\Contracts\Container\BindingResolutionException;
+use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\ImageManager as InterventionImageV3;
 use UniSharp\LaravelFilemanager\Events\ImageIsResizing;
 use UniSharp\LaravelFilemanager\Events\ImageWasResized;
 
@@ -13,17 +14,18 @@ class ResizeController extends LfmController
      * Dipsplay image for resizing.
      *
      * @return mixed
+     * @throws BindingResolutionException
      */
-    public function getResize()
+    public function getResize(): mixed
     {
         $ratio = 1.0;
         $image = request('img');
 
-        if (class_exists(InterventionImageV2::class)) {
-            $original_image = InterventionImageV2::make($this->lfm->setName($image)->path('absolute'));
-        } else {
-            $original_image = InterventionImageV3::read($this->lfm->setName($image)->path('absolute'));
-        }
+        $manager = new InterventionImageV3(
+            new Driver()
+        );
+        $original_image = $manager->read($this->lfm->setName($image)->path('absolute'));
+
         $original_width = $original_image->width();
         $original_height = $original_image->height();
 
@@ -57,7 +59,7 @@ class ResizeController extends LfmController
             ->with('ratio', $ratio);
     }
 
-    public function performResize($overWrite = true)
+    public function performResize($overWrite = true): string
     {
         $image_name = request('img');
         $image_path = $this->lfm->setName(request('img'))->path('absolute');
@@ -65,27 +67,25 @@ class ResizeController extends LfmController
 
         if (! $overWrite) {
             $fileParts = explode('.', $image_name);
-            $fileParts[count($fileParts) - 2] = $fileParts[count($fileParts) - 2] . '_resized_' . time();
+            $fileParts[count($fileParts) - 2] .= '_resized_' . time();
             $resize_path = $this->lfm->setName(implode('.', $fileParts))->path('absolute');
         }
 
         event(new ImageIsResizing($image_path));
 
-        if (class_exists(InterventionImageV2::class)) {
-            InterventionImageV2::make($image_path)
-                ->resize(request('dataWidth'), request('dataHeight'))
-                ->save($resize_path);
-        } else {
-            InterventionImageV3::read($image_path)
-                ->resize(request('dataWidth'), request('dataHeight'))
-                ->save($resize_path);
-        }
+        $manager = new InterventionImageV3(
+            new Driver()
+        );
+        $manager->read($image_path)
+            ->resize(request('dataWidth'), request('dataHeight'))
+            ->save($resize_path);
+
         event(new ImageWasResized($image_path));
 
         return parent::$success_response;
     }
 
-    public function performResizeNew()
+    public function performResizeNew(): void
     {
         $this->performResize(false);
     }

@@ -15,7 +15,7 @@ class LaravelFilemanagerServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         $this->loadTranslationsFrom(__DIR__.'/lang', 'laravel-filemanager');
 
@@ -38,8 +38,8 @@ class LaravelFilemanagerServiceProvider extends ServiceProvider
         ], 'lfm_handler');
 
         if (config('lfm.use_package_routes')) {
-            Route::group(['prefix' => 'filemanager', 'middleware' => ['web', 'auth']], function () {
-                \UniSharp\LaravelFilemanager\Lfm::routes();
+            Route::group(['prefix' => 'filemanager', 'middleware' => ['web', 'auth']], static function () {
+                Lfm::routes();
             });
         }
     }
@@ -49,7 +49,7 @@ class LaravelFilemanagerServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register()
+    public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/config/lfm.php', 'lfm-config');
 

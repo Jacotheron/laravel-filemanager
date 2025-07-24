@@ -8,7 +8,7 @@ use UniSharp\LaravelFilemanager\Lfm;
 
 class UploadController extends LfmController
 {
-    protected $errors;
+    protected array $errors;
 
     public function __construct()
     {
@@ -23,7 +23,7 @@ class UploadController extends LfmController
      *
      * @return JsonResponse
      */
-    public function upload()
+    public function upload(): JsonResponse
     {
         $uploaded_files = request()->file('upload');
         $error_bag = [];
@@ -40,14 +40,14 @@ class UploadController extends LfmController
                     'line' => $e->getLine(),
                     'trace' => $e->getTraceAsString()
                 ]);
-                array_push($error_bag, $e->getMessage());
+                $error_bag[] = $e->getMessage();
             } catch (\Error $e) {
                 Log::error($e->getMessage(), [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'trace' => $e->getTraceAsString()
                 ]);
-                array_push($error_bag, 'Some error occured during uploading.');
+                $error_bag[] = 'Some error occured during uploading.';
             }
         }
 

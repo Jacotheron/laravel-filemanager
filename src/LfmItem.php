@@ -12,8 +12,8 @@ class LfmItem
     private $isDirectory;
     private $mimeType = null;
 
-    private $columns = [];
-    public $attributes = [];
+    private mixed $columns = [];
+    public array $attributes = [];
 
     public function __construct(LfmPath $lfm, Lfm $helper, $isDirectory = false)
     {
@@ -34,7 +34,7 @@ class LfmItem
         return $this->attributes[$var_name];
     }
 
-    public function fill()
+    public function fill(): static
     {
         foreach ($this->columns as $column) {
             $this->__get($column);
@@ -48,7 +48,7 @@ class LfmItem
         return $this->lfm->getName();
     }
 
-    public function path($type = 'absolute')
+    public function path($type = 'absolute'): array|string
     {
         return $this->lfm->path($type);
     }
@@ -58,7 +58,7 @@ class LfmItem
         return $this->isDirectory;
     }
 
-    public function isFile()
+    public function isFile(): bool
     {
         return ! $this->isDirectory();
     }
@@ -66,10 +66,9 @@ class LfmItem
     /**
      * Check a file is image or not.
      *
-     * @param  mixed  $file  Real path of a file or instance of UploadedFile.
      * @return bool
      */
-    public function isImage()
+    public function isImage(): bool
     {
         return $this->isFile() && Str::startsWith($this->mimeType(), 'image');
     }
@@ -77,10 +76,9 @@ class LfmItem
     /**
      * Get mime type of a file.
      *
-     * @param  mixed  $file  Real path of a file or instance of UploadedFile.
      * @return string
      */
-    public function mimeType()
+    public function mimeType(): string
     {
         if (is_null($this->mimeType)) {
             $this->mimeType = $this->lfm->mimeType();
@@ -94,7 +92,7 @@ class LfmItem
         return $this->lfm->extension();
     }
 
-    public function url()
+    public function url(): array|string
     {
         if ($this->isDirectory()) {
             return $this->lfm->path('working_dir');
@@ -103,14 +101,14 @@ class LfmItem
         return $this->lfm->url();
     }
 
-    public function size()
+    public function size(): string
     {
         return $this->isFile() ? $this->humanFilesize($this->lfm->size()) : '';
     }
 
-    public function time()
+    public function time(): string
     {
-        return $this->lfm->lastModified();
+        return $this->isFile() ? $this->lfm->lastModified() : '';
     }
 
     public function thumbUrl()
@@ -126,7 +124,7 @@ class LfmItem
         return null;
     }
 
-    public function icon()
+    public function icon(): string
     {
         if ($this->isDirectory()) {
             return 'fa-folder-o';
@@ -152,7 +150,7 @@ class LfmItem
         return $this->helper->getFileType($this->extension());
     }
 
-    public function hasThumb()
+    public function hasThumb(): bool
     {
         if (!$this->isImage()) {
             return false;
@@ -165,7 +163,7 @@ class LfmItem
         return true;
     }
 
-    public function shouldCreateThumb()
+    public function shouldCreateThumb(): bool
     {
         if (!$this->helper->config('should_create_thumbnails')) {
             return false;
@@ -190,15 +188,15 @@ class LfmItem
     /**
      * Make file size readable.
      *
-     * @param  int  $bytes     File size in bytes.
-     * @param  int  $decimals  Decimals.
+     * @param int $bytes     File size in bytes.
+     * @param int $decimals  Decimals.
      * @return string
      */
-    public function humanFilesize($bytes, $decimals = 2)
+    public function humanFilesize(int $bytes, int $decimals = 2): string
     {
         $size = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
         $factor = floor((strlen($bytes) - 1) / 3);
 
-        return sprintf("%.{$decimals}f %s", $bytes / pow(1024, $factor), @$size[$factor]);
+        return sprintf("%.{$decimals}f %s", $bytes / (1024 ** $factor), @$size[$factor]);
     }
 }

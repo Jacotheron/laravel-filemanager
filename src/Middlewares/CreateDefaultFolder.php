@@ -25,7 +25,7 @@ class CreateDefaultFolder
         return $next($request);
     }
 
-    private function checkDefaultFolderExists($type = 'share')
+    private function checkDefaultFolderExists($type = 'share'): void
     {
         if (! $this->helper->allowFolderType($type)) {
             return;

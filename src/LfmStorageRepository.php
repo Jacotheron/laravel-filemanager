@@ -23,30 +23,30 @@ class LfmStorageRepository
         return $this->disk->$function_name($this->path, ...$arguments);
     }
 
-    public function rootPath()
+    public function rootPath(): string
     {
         return $this->disk->path('');
     }
 
-    public function move($new_lfm_path)
+    public function move($new_lfm_path): bool
     {
         return $this->disk->move($this->path, $new_lfm_path->path('storage'));
     }
 
-    public function save($file)
+    public function save($file): void
     {
-        $nameint = strripos($this->path, "/");
+        $nameint = strrpos($this->path, "/");
         $nameclean = substr($this->path, $nameint + 1);
         $pathclean = substr_replace($this->path, "", $nameint);
         $this->disk->putFileAs($pathclean, $file, $nameclean, 'public');
     }
 
-    public function url($path)
+    public function url($path): string
     {
         return $this->disk->url($path);
     }
 
-    public function makeDirectory()
+    public function makeDirectory(): void
     {
         $this->disk->makeDirectory($this->path, ...func_get_args());
 
@@ -57,7 +57,7 @@ class LfmStorageRepository
         }
     }
 
-    public function extension()
+    public function extension(): array|string
     {
         setlocale(LC_ALL, 'en_US.UTF-8');
         return pathinfo($this->path, PATHINFO_EXTENSION);

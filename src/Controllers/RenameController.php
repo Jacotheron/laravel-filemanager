@@ -2,6 +2,7 @@
 
 namespace UniSharp\LaravelFilemanager\Controllers;
 
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\Facades\Storage;
 use UniSharp\LaravelFilemanager\Events\FolderIsRenaming;
 use UniSharp\LaravelFilemanager\Events\FolderWasRenamed;
@@ -12,7 +13,10 @@ use UniSharp\LaravelFilemanager\Events\ImageWasRenamed;
 
 class RenameController extends LfmController
 {
-    public function getRename()
+    /**
+     * @throws BindingResolutionException
+     */
+    public function getRename(): string
     {
         $old_name = $this->helper->input('file');
         $new_name = $this->helper->input('new_name');
@@ -29,18 +33,22 @@ class RenameController extends LfmController
 
         if (empty($new_name)) {
             if ($is_directory) {
-                return response()->json(parent::error('folder-name'), 400);
-            } else {
-                return response()->json(parent::error('file-name'), 400);
+                return response()->json($this->error('folder-name'), 400);
             }
+
+            return response()->json($this->error('file-name'), 400);
         }
 
         if ($is_directory && config('lfm.alphanumeric_directory') && preg_match('/[^\w-]/i', $new_name)) {
-            return response()->json(parent::error('folder-alnum'), 400);
-        } elseif (config('lfm.alphanumeric_filename') && preg_match('/[^.\w-]/i', $new_name)) {
-            return response()->json(parent::error('file-alnum'), 400);
-        } elseif ($this->lfm->setName($new_name)->exists()) {
-            return response()->json(parent::error('rename'), 400);
+            return response()->json($this->error('folder-alnum'), 400);
+        }
+
+        if (config('lfm.alphanumeric_filename') && preg_match('/[^.\w-]/i', $new_name)) {
+            return response()->json($this->error('file-alnum'), 400);
+        }
+
+        if ($this->lfm->setName($new_name)->exists()) {
+            return response()->json($this->error('rename'), 400);
         }
 
         if (! $is_directory) {

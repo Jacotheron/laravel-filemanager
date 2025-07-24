@@ -2,14 +2,24 @@
 
 namespace UniSharp\LaravelFilemanager;
 
+use Exception;
 use Illuminate\Container\Container;
-use Intervention\Image\Facades\Image as InterventionImageV2;
-use Intervention\Image\Laravel\Facades\Image as InterventionImageV3;
+use Illuminate\Contracts\Container\BindingResolutionException;
+use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\ImageManager as InterventionImageV3;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use UniSharp\LaravelFilemanager\Events\FileIsUploading;
 use UniSharp\LaravelFilemanager\Events\FileWasUploaded;
 use UniSharp\LaravelFilemanager\Events\ImageIsUploading;
 use UniSharp\LaravelFilemanager\Events\ImageWasUploaded;
+use UniSharp\LaravelFilemanager\Exceptions\DuplicateFileNameException;
+use UniSharp\LaravelFilemanager\Exceptions\ExcutableFileException;
+use UniSharp\LaravelFilemanager\Exceptions\FileFailedToUploadException;
+use UniSharp\LaravelFilemanager\Exceptions\FileSizeExceedConfigurationMaximumException;
+use UniSharp\LaravelFilemanager\Exceptions\FileSizeExceedIniMaximumException;
+use UniSharp\LaravelFilemanager\Exceptions\InvalidExtensionException;
+use UniSharp\LaravelFilemanager\Exceptions\InvalidMimeTypeException;
 use UniSharp\LaravelFilemanager\LfmUploadValidator;
 
 class LfmPath
@@ -27,7 +37,7 @@ class LfmPath
 
     public function __get($var_name)
     {
-        if ($var_name == 'storage') {
+        if ($var_name === 'storage') {
             return $this->helper->getStorage($this->path('url'));
         }
     }
@@ -37,21 +47,21 @@ class LfmPath
         return $this->storage->$function_name(...$arguments);
     }
 
-    public function dir($working_dir)
+    public function dir($working_dir): static
     {
         $this->working_dir = $working_dir;
 
         return $this;
     }
 
-    public function thumb($is_thumb = true)
+    public function thumb($is_thumb = true): static
     {
         $this->is_thumb = $is_thumb;
 
         return $this;
     }
 
-    public function setName($item_name)
+    public function setName($item_name): static
     {
         $this->item_name = $item_name;
 
@@ -65,37 +75,41 @@ class LfmPath
 
     public function path($type = 'storage')
     {
-        if ($type == 'working_dir') {
+        if ($type === 'working_dir') {
             // working directory: /{user_slug}
             return $this->translateToLfmPath($this->normalizeWorkingDir());
-        } elseif ($type == 'url') {
+        }
+
+        if ($type === 'url') {
             // storage: files/{user_slug}
             // storage without folder: {user_slug}
             return $this->helper->getCategoryName() === '.'
                 ? ltrim($this->path('working_dir'), '/')
                 : $this->helper->getCategoryName() . $this->path('working_dir');
-        } elseif ($type == 'storage') {
+        }
+
+        if ($type === 'storage') {
             // storage: files/{user_slug}
             // storage on windows: files\{user_slug}
             return str_replace(Lfm::DS, $this->helper->ds(), $this->path('url'));
-        } else {
-            // absolute: /var/www/html/project/storage/app/files/{user_slug}
-            // absolute on windows: C:\project\storage\app\files\{user_slug}
-            return $this->storage->rootPath() . $this->path('storage');
         }
+
+// absolute: /var/www/html/project/storage/app/files/{user_slug}
+        // absolute on windows: C:\project\storage\app\files\{user_slug}
+        return $this->storage->rootPath() . $this->path('storage');
     }
 
-    public function translateToLfmPath($path)
+    public function translateToLfmPath($path): array|string
     {
         return str_replace($this->helper->ds(), Lfm::DS, $path);
     }
 
-    public function url()
+    public function url(): string
     {
         return $this->storage->url($this->path('url'));
     }
 
-    public function folders()
+    public function folders(): array
     {
         $all_folders = array_map(function ($directory_path) {
             return $this->pretty($directory_path, true);
@@ -108,15 +122,20 @@ class LfmPath
         return $this->sortByColumn($folders);
     }
 
-    public function files()
+    public function files(): array
     {
-        $files = array_map(function ($file_path) {
+        $files = array_map(/**
+         * @throws BindingResolutionException
+         */ function ($file_path) {
             return $this->pretty($file_path);
         }, $this->storage->files());
 
         return $this->sortByColumn($files);
     }
 
+    /**
+     * @throws BindingResolutionException
+     */
     public function pretty($item_path, $isDirectory = false)
     {
         return Container::getInstance()->makeWith(LfmItem::class, [
@@ -130,9 +149,9 @@ class LfmPath
     {
         if ($this->isDirectory()) {
             return $this->storage->deleteDirectory();
-        } else {
-            return $this->storage->delete();
         }
+
+        return $this->storage->delete();
     }
 
     /**
@@ -141,7 +160,7 @@ class LfmPath
      * @param  string  $path  Real path of a directory.
      * @return bool
      */
-    public function createFolder()
+    public function createFolder(): bool
     {
         if ($this->storage->exists($this)) {
             return false;
@@ -150,16 +169,16 @@ class LfmPath
         $this->storage->makeDirectory(0777, true, true);
     }
 
-    public function isDirectory()
+    public function isDirectory(): bool
     {
         $working_dir = $this->path('working_dir');
         $parent_dir = substr($working_dir, 0, strrpos($working_dir, '/'));
 
-        $parent_directories = array_map(function ($directory_path) {
+        $parent_directories = array_map(static function ($directory_path) {
             return app(static::class)->translateToLfmPath($directory_path);
         }, app(static::class)->dir($parent_dir)->directories());
 
-        return in_array($this->path('url'), $parent_directories);
+        return in_array($this->path('url'), $parent_directories, true);
     }
 
     /**
@@ -168,12 +187,12 @@ class LfmPath
      * @param  string  $directory_path  Real path of a directory.
      * @return bool
      */
-    public function directoryIsEmpty()
+    public function directoryIsEmpty(): bool
     {
-        return count($this->storage->allFiles()) == 0;
+        return count($this->storage->allFiles()) === 0;
     }
 
-    public function normalizeWorkingDir()
+    public function normalizeWorkingDir(): string
     {
         $path = $this->working_dir
             ?: $this->helper->input('working_dir')
@@ -198,7 +217,7 @@ class LfmPath
      * @param  mixed  $arr_items  Array of files or folders or both.
      * @return array of object
      */
-    public function sortByColumn($arr_items)
+    public function sortByColumn(mixed $arr_items): array
     {
         $sort_by = $this->helper->input('sort_type');
         if (in_array($sort_by, ['name', 'time'])) {
@@ -207,20 +226,23 @@ class LfmPath
             $key_to_sort = 'name';
         }
 
-        uasort($arr_items, function ($a, $b) use ($key_to_sort) {
+        uasort($arr_items, static function ($a, $b) use ($key_to_sort) {
             return strcasecmp($a->{$key_to_sort}, $b->{$key_to_sort});
         });
 
         return $arr_items;
     }
 
-    public function error($error_type, $variables = [])
+    /**
+     * @throws Exception
+     */
+    public function error($error_type, $variables = []): void
     {
-        throw new \Exception($this->helper->error($error_type, $variables));
+        throw new RuntimeException($this->helper->error($error_type, $variables));
     }
 
     // Upload section
-    public function upload($file)
+    public function upload($file): array|string|null
     {
         $new_file_name = $this->getNewName($file);
         $new_file_path = $this->setName($new_file_name)->path('absolute');
@@ -231,7 +253,7 @@ class LfmPath
             $this->setName($new_file_name)->storage->save($file);
 
             $this->generateThumbnail($new_file_name);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \Log::info($e);
             return $this->error('invalid');
         }
@@ -241,7 +263,16 @@ class LfmPath
         return $new_file_name;
     }
 
-    public function validateUploadedFile($file)
+    /**
+     * @throws FileFailedToUploadException
+     * @throws InvalidExtensionException
+     * @throws ExcutableFileException
+     * @throws DuplicateFileNameException
+     * @throws InvalidMimeTypeException
+     * @throws FileSizeExceedIniMaximumException
+     * @throws FileSizeExceedConfigurationMaximumException
+     */
+    public function validateUploadedFile($file): bool
     {
         $validator = new LfmUploadValidator($file);
 
@@ -270,7 +301,7 @@ class LfmPath
         return true;
     }
 
-    private function getNewName($file)
+    private function getNewName($file): array|string|null
     {
         $new_file_name = $this->helper->translateFromUtf8(
             trim($this->helper->utf8Pathinfo($file->getClientOriginalName(), "filename"))
@@ -279,7 +310,7 @@ class LfmPath
         $extension = $file->getClientOriginalExtension();
 
         if (config('lfm.rename_file') === true) {
-            $new_file_name = uniqid();
+            $new_file_name = uniqid('', true);
         } elseif (config('lfm.alphanumeric_filename') === true) {
             $new_file_name = preg_replace('/[^A-Za-z0-9\-\']/', '_', $new_file_name);
         }
@@ -309,7 +340,10 @@ class LfmPath
         return ($extension) ? $new_file_name_with_extention : $new_file_name;
     }
 
-    public function generateThumbnail($file_name)
+    /**
+     * @throws BindingResolutionException
+     */
+    public function generateThumbnail($file_name): void
     {
         $original_image = $this->pretty($file_name);
 
@@ -325,17 +359,12 @@ class LfmPath
         $thumbWidth = $this->helper->shouldCreateCategoryThumb() && $this->helper->categoryThumbWidth() ? $this->helper->categoryThumbWidth() : config('lfm.thumb_img_width', 200);
         $thumbHeight = $this->helper->shouldCreateCategoryThumb() && $this->helper->categoryThumbHeight() ? $this->helper->categoryThumbHeight() : config('lfm.thumb_img_height', 200);
 
-        if (class_exists(InterventionImageV2::class)) {
-            $encoded_image = InterventionImageV2::make($original_image->get())
-                ->fit($thumbWidth, $thumbHeight)
-                ->stream()
-                ->detach();
-        } else {
-            $encoded_image = InterventionImageV3::read($original_image->get())
-                ->cover($thumbWidth, $thumbHeight)
-                ->encodeByMediaType();
-        }
-
+        $manager = new InterventionImageV3(
+            new Driver()
+        );
+        $encoded_image = $manager->read($original_image->get())
+            ->cover($thumbWidth, $thumbHeight)
+            ->encodeByMediaType();
 
         $this->storage->put($encoded_image, 'public');
     }

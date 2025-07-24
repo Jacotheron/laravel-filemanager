@@ -21,7 +21,7 @@ class MultiUser
             $previous_dir = $request->input('working_dir');
             $working_dir = $this->helper->getRootFolder('user');
 
-            if ($previous_dir == null) {
+            if ($previous_dir === null) {
                 $request->merge(compact('working_dir'));
             } elseif (! $this->validDir($previous_dir)) {
                 $request->replace(compact('working_dir'));
@@ -31,7 +31,7 @@ class MultiUser
         return $next($request);
     }
 
-    private function validDir($previous_dir)
+    private function validDir($previous_dir): bool
     {
         if (Str::startsWith($previous_dir, $this->helper->getRootFolder('share'))) {
             return true;
