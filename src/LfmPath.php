@@ -169,6 +169,8 @@ class LfmPath
         }
 
         $this->storage->makeDirectory(0777, true, true);
+
+        return true;
     }
 
     public function isDirectory(): bool
