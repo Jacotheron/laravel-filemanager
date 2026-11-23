@@ -3,7 +3,7 @@
 namespace UniSharp\LaravelFilemanager\Controllers;
 
 use Illuminate\Contracts\Container\BindingResolutionException;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager as InterventionImageV3;
 use UniSharp\LaravelFilemanager\Events\ImageIsResizing;
 use UniSharp\LaravelFilemanager\Events\ImageWasResized;
