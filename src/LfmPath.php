@@ -5,7 +5,7 @@ namespace UniSharp\LaravelFilemanager;
 use Exception;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager as InterventionImageV3;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
